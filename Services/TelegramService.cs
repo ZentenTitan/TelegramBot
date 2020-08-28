@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Linq;
 using System.Collections.Generic;
 using Telegram.Bot;
@@ -109,7 +109,7 @@ namespace FinancialSystem.Services
                     var borrow = db.Debtors.First(d => d.ChatId == chatId && d.DebtorId == userId && d.DebtorPhase == 1);
                     borrow.DebtorPhase = 2;
                     db.SaveChanges();
-                    await client.SendTextMessageAsync(chatId, $"Выберите у кого вы хотите занять:", replyToMessageId: messageId, replyMarkup: BorrowKeyboard(chatId, userName, db));
+                    await client.SendTextMessageAsync(chatId, $"Выберите у кого вы хотите занять:", replyToMessageId: messageId, replyMarkup: BorrowKeyboard(chatId, userId, db));
                     return;
                 }
                 await client.SendTextMessageAsync(chatId, "Сначала завершите предыдущую операцию, либо используйте /cancel", replyToMessageId: messageId);
@@ -160,7 +160,7 @@ namespace FinancialSystem.Services
                             item.DebtorPhase = 6;
                         }
                         db.SaveChanges();
-                        await client.SendTextMessageAsync(chatId, "Выберите у кого вы одалживали:", replyToMessageId: messageId, replyMarkup: YieldKeyboard(chatId, userName, db));
+                        await client.SendTextMessageAsync(chatId, "Выберите у кого вы одалживали:", replyToMessageId: messageId, replyMarkup: YieldKeyboard(chatId, userId, db));
                         return;
                     }
                     await client.SendTextMessageAsync(chatId, "Некому возвращать долг.", replyToMessageId: messageId);
@@ -233,16 +233,13 @@ namespace FinancialSystem.Services
             {
                 if (db.Debtors.FirstOrDefault(d => d.ChatId == chatId && d.DebtorId == userId && d.DebtorPhase == 2) != null)
                 {
-                    var lenders = db.Debtors.Where(d => d.ChatId == chatId);
+                    var lenders = db.Debtors.Where(d => d.ChatId == chatId && d.DebtorId != userId);
                     List<string> debtorsUsername = new List<string>();
                     foreach (var lender in lenders)
                     {
                         if (!debtorsUsername.Contains(lender.DebtorUsername))
                         {
-                            if (lender.DebtorUsername != userName)
-                            {
-                                debtorsUsername.Add(lender.DebtorUsername);
-                            }
+                            debtorsUsername.Add(lender.DebtorUsername);
                         }
                     }
                     if (db.Debtors.FirstOrDefault(d => d.ChatId == chatId && d.DebtorId == userId && debtorsUsername.Contains(userText) && d.DebtorPhase == 2) != null)
@@ -296,18 +293,15 @@ namespace FinancialSystem.Services
             }
         }
 
-        ReplyKeyboardMarkup BorrowKeyboard(long chatId, string debtorUsername, ApplicationContext db)
+        ReplyKeyboardMarkup BorrowKeyboard(long chatId, int userId, ApplicationContext db)
         {
-            var debtors = db.Debtors.Where(d => d.ChatId == chatId);
+            var debtors = db.Debtors.Where(d => d.ChatId == chatId && d.DebtorId != userId);
             List<string> debtorsUsername = new List<string>();
             foreach (var debtor in debtors)
             {
                 if (!debtorsUsername.Contains(debtor.DebtorUsername))
                 {
-                    if (debtor.DebtorUsername != debtorUsername)
-                    {
-                        debtorsUsername.Add(debtor.DebtorUsername);
-                    }
+                    debtorsUsername.Add(debtor.DebtorUsername);
                 }
             }
             KeyboardButton[] keyboardButtons = new KeyboardButton[debtorsUsername.Count()];
@@ -318,13 +312,13 @@ namespace FinancialSystem.Services
             return new ReplyKeyboardMarkup(keyboardButtons) { ResizeKeyboard = true, Selective = true };
         }
 
-        ReplyKeyboardMarkup YieldKeyboard(long chatId, string debtorUsername, ApplicationContext db)
+        ReplyKeyboardMarkup YieldKeyboard(long chatId, int userId, ApplicationContext db)
         {
-            var lenders = db.Debtors.Where(d => d.ChatId == chatId && d.DebtorUsername == debtorUsername);
+            var lenders = db.Debtors.Where(d => d.ChatId == chatId && d.DebtorId == userId && d.LenderUsername != null);
             List<string> lendersUsername = new List<string>();
             foreach (var lender in lenders)
             {
-                if (!lendersUsername.Contains(lender.LenderUsername) && lender.LenderUsername != null)
+                if (!lendersUsername.Contains(lender.LenderUsername))
                 {
                     lendersUsername.Add(lender.LenderUsername);
                 }
