@@ -44,10 +44,10 @@ namespace FinancialSystem.Services
             await client.SendTextMessageAsync(callbackQuery.Message.Chat.Id, "Помощь в использовании: /help" +
                                                       "\nИнициализация в БД чата: /init" +
                                                       "\nЗанять денег: /borrow" +
-                                                      "\nПогасить долг: /yield" +
-                                                      "\nПодтвердить займ или погашение долга: /approveUsername" +
+                                                      "\nПогасить долг: /yield" +                                                      
                                                       "\nОтмена текущих операций: /cancel" +
-                                                      "\nИнформация о займах и долгах: /me"
+                                                      "\nИнформация о займах и долгах: /me" +
+                                                      "\nПодтвердить займ или погашение долга: /approveUsername"
                                                       );
             return;
         }
@@ -190,7 +190,7 @@ namespace FinancialSystem.Services
                     Debtor debtor = new Debtor { ChatId = chatId, DebtorId = userId, DebtorPhase = 1, DebtorUsername = userName };
                     db.Debtors.Add(debtor);
                     db.SaveChanges();
-                    await client.SendTextMessageAsync(chatId, "Все текущие операции отменены.", replyToMessageId: messageId, replyMarkup: new ReplyKeyboardRemove() { Selective = true });
+                    await client.SendTextMessageAsync(chatId, "Текущая операция отменена.", replyToMessageId: messageId, replyMarkup: new ReplyKeyboardRemove() { Selective = true });
                     return;
                 }
                 else
